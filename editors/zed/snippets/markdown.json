@@ -1,0 +1,30 @@
+{
+  "Obsidian wikilink": {
+    "prefix": "wiki",
+    "body": ["[[$1]]$0"],
+    "description": "Insert an Obsidian wikilink"
+  },
+  "Obsidian callout": {
+    "prefix": "callout",
+    "body": [
+      "> [!${1|note,tip,warning,important,info,example,question,danger,success,bug,quote|}] ${2:Title}",
+      "> ${0:Content}"
+    ],
+    "description": "Insert an Obsidian callout"
+  },
+  "Task": {
+    "prefix": "task",
+    "body": ["- [ ] ${0:Task}"],
+    "description": "Insert a Markdown task"
+  },
+  "YAML frontmatter": {
+    "prefix": "frontmatter",
+    "body": ["---", "title: ${1:Title}", "tags:", "  - ${2:tag}", "---", "", "$0"],
+    "description": "Insert YAML frontmatter"
+  },
+  "Display math": {
+    "prefix": "mathblock",
+    "body": ["$$", "$1", "$$", "$0"],
+    "description": "Insert a display-math block"
+  }
+}

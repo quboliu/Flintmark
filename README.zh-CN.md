@@ -207,6 +207,18 @@ code --install-extension quboliu.flintmark
 }
 ```
 
+### Zed 开发预览
+
+仓库现在也包含原生 Zed 扩展适配层：[`editors/zed`](editors/zed)。它在 Zed 内置
+Markdown 编辑器上提供全库 wikilink/标签补全、定义跳转、引用与反链、标题/任务 Outline、
+可点击文档链接以及 Obsidian 常用片段；渲染结果使用 Zed 自带的
+`markdown: open preview to the side`。
+
+这不是 VS Code 版 UI 的完全复刻：Zed 当前还没有向扩展开放自定义编辑器/Webview，因而
+无法承载 Flintmark 的光标感知行内 Live Preview、交互式 widget 和自定义侧栏。适配层已经
+可以用开发模式安装，首个协同版本发布后再进入 Zed 扩展仓库。功能边界和安装步骤见
+[Zed README](editors/zed/README.md)。
+
 ## 设置
 
 | 设置项 | 默认值 | 说明 |
@@ -253,6 +265,7 @@ npm run lint
 npx tsc --noEmit -p .
 npm run test:unit
 npm run test:perf
+npm run test:zed
 npm run test:e2e
 ```
 

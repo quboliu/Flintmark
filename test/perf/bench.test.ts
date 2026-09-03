@@ -18,6 +18,7 @@ import {
   LIVE_PREVIEW_DECORATION_CHAR_LIMIT,
 } from "../../src/webview/view/markdownDecorations";
 
+const OUTPUT_ROOT = process.env.FLINTMARK_OUT_DIR || "out";
 let failed = 0;
 // Generous: ~50x typical; only catches catastrophic regressions, never drift.
 const CATASTROPHIC_MS = 1500;
@@ -93,9 +94,9 @@ try {
 }
 
 try {
-  mkdirSync("out/metrics", { recursive: true });
+  mkdirSync(`${OUTPUT_ROOT}/metrics`, { recursive: true });
   writeFileSync(
-    "out/metrics/perf.json",
+    `${OUTPUT_ROOT}/metrics/perf.json`,
     JSON.stringify(
       { layer: "perf", sizes: results, durationMs: Date.now() - startedAt },
       null,

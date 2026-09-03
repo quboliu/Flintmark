@@ -272,6 +272,8 @@
   "scripts": {
     "vscode:prepublish": "npm run compile",
     "compile": "node esbuild.mjs",
+    "compile:zed-lsp": "node scripts/build-zed.mjs",
+    "check:versions": "node scripts/check-release-versions.mjs",
     "watch": "node esbuild.mjs --watch",
     "lint": "eslint src",
     "test:unit": "node test/run-unit.mjs",
@@ -285,10 +287,11 @@
     "test:e2e": "npm run compile && xvfb-run -a node test/e2e/vault-ready-lifecycle.e2e.mjs && xvfb-run -a node test/e2e/livepreview.e2e.mjs && xvfb-run -a node test/e2e/todo-sync.e2e.mjs && xvfb-run -a node test/e2e/external-update.e2e.mjs && xvfb-run -a node test/e2e/theme-mode.e2e.mjs && xvfb-run -a node test/e2e/image-index-lifecycle.e2e.mjs",
     "test:visual": "npm run compile && xvfb-run -a node test/e2e/visual.e2e.mjs",
     "test:visual:update": "npm run compile && xvfb-run -a node test/e2e/visual.e2e.mjs --update",
+    "test:zed": "npm run compile:zed-lsp && node scripts/test-zed-lsp.mjs",
     "shots:features": "npm run compile && xvfb-run -a node scripts/capture-shots.mjs",
     "shots:go-pipelines": "npm run compile && xvfb-run -a node scripts/capture-go-pipelines-shots.mjs",
     "shots:navigation": "npm run compile && xvfb-run -a node scripts/capture-navigation-shot.mjs",
-    "test": "npm run test:unit && npm run test:perf && npm run test:integration && npm run test:e2e"
+    "test": "npm run test:unit && npm run test:perf && npm run test:zed && npm run test:integration && npm run test:e2e"
   },
   "devDependencies": {
     "@stryker-mutator/core": "^9.6.1",

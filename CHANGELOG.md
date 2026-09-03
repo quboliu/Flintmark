@@ -3,6 +3,20 @@
 All notable changes to Flintmark are documented here. Versions are pre-1.0 while
 the editor stabilizes for the Marketplace.
 
+## Unreleased
+
+- **Zed developer preview.** A native Zed extension adapter now exposes
+  Flintmark's vault intelligence through LSP: wikilink/tag/heading/block
+  completion, definition and reference navigation, backlinks, hover/document
+  links, heading/task Outline symbols, workspace symbols, and Obsidian-oriented
+  snippets. It uses Zed's built-in Markdown preview because Zed does not yet
+  expose a custom-editor or webview API.
+- **Coordinated multi-editor releases.** One version tag now validates both
+  manifests and produces the VSIX, a downloadable Zed language-server bundle,
+  a Zed dev-extension archive, and checksums on the same GitHub Release. CI
+  checks the Zed Rust/WASM adapter and runs an end-to-end LSP protocol smoke
+  test alongside the shared parser tests.
+
 ## 0.32.13
 
 - **Keystrokes no longer rescan the whole document.** Table and inline-SVG

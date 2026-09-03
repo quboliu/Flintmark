@@ -1,0 +1,12 @@
+id = "flintmark"
+name = "Flintmark"
+description = "Obsidian-aware wikilinks, tags, outline, tasks, and vault navigation for Markdown"
+version = "0.32.13"
+schema_version = 1
+authors = ["quboliu"]
+repository = "https://github.com/quboliu/flintmark"
+snippets = ["./snippets/markdown.json"]
+
+[language_servers.flintmark]
+name = "Flintmark"
+languages = ["Markdown", "Markdown-Inline"]

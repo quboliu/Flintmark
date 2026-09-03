@@ -71,7 +71,8 @@ const ONLY_ITER = process.env.FUZZ_ITER === undefined ? -1 : Number(process.env.
 // tree to completion up to this position so the result is load-independent.
 const PARSE_UPTO = 300_000;
 const PARSE_BUDGET_MS = 1e9; // per ensureSyntaxTree call: effectively unlimited time
-const CRASH_DIR = "out/chaos-crashes";
+const OUTPUT_ROOT = process.env.FLINTMARK_OUT_DIR || "out";
+const CRASH_DIR = `${OUTPUT_ROOT}/chaos-crashes`;
 const CORPUS_DIR = "test/chaos/corpus";
 // Phase tags keep the soup and mutation sub-seed streams independent.
 const PHASE_SOUP = 0x50facade;
@@ -368,9 +369,9 @@ if (ONLY_ITER < 0) {
   const corpusCount = loadCorpus().length;
   const docsFuzzed = RUNS * 2 + FIXED.length + corpusCount; // soup + mutation phases
   try {
-    fs.mkdirSync("out/metrics", { recursive: true });
+    fs.mkdirSync(`${OUTPUT_ROOT}/metrics`, { recursive: true });
     fs.writeFileSync(
-      "out/metrics/chaos.json",
+      `${OUTPUT_ROOT}/metrics/chaos.json`,
       JSON.stringify(
         {
           layer: "chaos",

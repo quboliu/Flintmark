@@ -1,0 +1,11 @@
+[package]
+name = "flintmark-zed"
+version = "0.32.13"
+edition = "2021"
+publish = false
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+zed_extension_api = "0.7.0"

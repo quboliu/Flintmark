@@ -7,9 +7,10 @@
 #
 #   git tag v0.28.0 && git push origin v0.28.0
 #
-# Flow: re-verify the fast gate -> package a clean VSIX -> assert it is
-# well-formed (runtime present, no dev/test artifacts) -> create/update the
-# GitHub Release -> publish to the VS Code Marketplace when a PAT is available.
+# Flow: re-verify both editor targets -> package a clean VSIX, the Zed LSP, and
+# a dev-extension archive -> assert every artifact is well-formed -> create or
+# update the GitHub Release -> publish to the VS Code Marketplace when a PAT is
+# available. Zed registry publication is PR-based; see .github/RELEASING.md.
 #
 # The `marketplace` GitHub Environment limits access to the PAT to `main` and
 # version tags. See .github/RELEASING.md.
@@ -18,7 +19,7 @@ name: Release
 on:
   push:
     tags: ["v*"]
-  workflow_dispatch: # manual re-run; releases the current package.json version
+  workflow_dispatch: # manual re-run; choose the matching existing version tag
 
 # Never cancel a release mid-flight (a half-published version is worse than a
 # queued one).
@@ -30,7 +31,7 @@ permissions: {}
 
 jobs:
   verify:
-    name: Verify (lint · types · unit)
+    name: Verify (VS Code · Zed · shared core)
     runs-on: ubuntu-latest
     timeout-minutes: 12
     permissions:
@@ -44,11 +45,15 @@ jobs:
       - run: npm ci
       - run: npm run lint
       - run: npx tsc --noEmit -p .
+      - run: npm run check:versions
       - run: npm run test:unit
       - run: npm run test:perf
+      - run: npm run test:zed
+      - run: rustup target add wasm32-wasip2
+      - run: cargo build --locked --release --manifest-path editors/zed/Cargo.toml --target wasm32-wasip2
 
   release:
-    name: Package · GitHub Release · Marketplace (optional)
+    name: Package both editors · GitHub Release · VS Marketplace
     runs-on: ubuntu-latest
     needs: verify
     timeout-minutes: 15
@@ -78,12 +83,32 @@ jobs:
             echo "::error::tag ${TAG} does not match package.json version v${PKG}"
             exit 1
           fi
+          git fetch --force origin "refs/tags/${TAG}:refs/tags/${TAG}"
+          TAG_SHA="$(git rev-list -n 1 "$TAG")"
+          CHECKOUT_SHA="$(git rev-parse HEAD)"
+          if [ "$TAG_SHA" != "$CHECKOUT_SHA" ]; then
+            echo "::error::workflow commit ${CHECKOUT_SHA} is not tagged ${TAG} (${TAG_SHA})"
+            echo "::error::for a manual re-run, select the existing ${TAG} tag as the workflow ref"
+            exit 1
+          fi
           echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
           echo "version=${PKG}" >> "$GITHUB_OUTPUT"
           echo "Releasing ${TAG}"
 
       - name: Package VSIX (clean build via vscode:prepublish)
         run: npx @vscode/vsce package
+
+      - name: Package Zed language server + dev extension
+        run: |
+          VERSION="${{ steps.ver.outputs.version }}"
+          npm run compile:zed-lsp
+          mkdir -p release-assets
+          (cd out/zed && zip -9 "../../release-assets/flintmark-zed-lsp-${VERSION}.zip" flintmark-lsp.cjs)
+          git archive --format=zip \
+            --prefix="flintmark-zed-${VERSION}/" \
+            --output="release-assets/flintmark-zed-${VERSION}.zip" \
+            HEAD:editors/zed
+          (cd release-assets && sha256sum *.zip > SHA256SUMS.txt)
 
       - name: Assert VSIX is well-formed
         run: |
@@ -100,6 +125,18 @@ jobs:
             unzip -l "$VSIX" | grep -E 'extension/out/(test|coverage|metrics|mutation|stryker)|extension/scripts/|extension/\.github/|\.cjs$'
             exit 1
           fi
+
+      - name: Assert Zed artifacts are well-formed
+        run: |
+          VERSION="${{ steps.ver.outputs.version }}"
+          LSP="release-assets/flintmark-zed-lsp-${VERSION}.zip"
+          EXT="release-assets/flintmark-zed-${VERSION}.zip"
+          unzip -Z1 "$LSP" | grep -qxF "flintmark-lsp.cjs" \
+            || { echo "::error::Zed LSP archive is missing flintmark-lsp.cjs"; exit 1; }
+          for file in extension.toml Cargo.toml Cargo.lock LICENSE src/lib.rs; do
+            unzip -Z1 "$EXT" | grep -qxF "flintmark-zed-${VERSION}/${file}" \
+              || { echo "::error::Zed dev archive is missing ${file}"; exit 1; }
+          done
 
       - name: Extract release notes from CHANGELOG
         run: |
@@ -118,37 +155,47 @@ jobs:
           TAG="${{ steps.ver.outputs.tag }}"
           TITLE="Flintmark ${{ steps.ver.outputs.version }}"
           VSIX="flintmark-${{ steps.ver.outputs.version }}.vsix"
+          ZED_LSP="release-assets/flintmark-zed-lsp-${{ steps.ver.outputs.version }}.zip"
+          ZED_EXT="release-assets/flintmark-zed-${{ steps.ver.outputs.version }}.zip"
+          CHECKSUMS="release-assets/SHA256SUMS.txt"
           git fetch --force --tags origin "$TAG"
           TARGET="$(git rev-list -n 1 "$TAG")"
           if gh release view "$TAG" >/dev/null 2>&1; then
             gh release edit "$TAG" --title "$TITLE" --notes-file RELEASE_NOTES.md
           else
-            CREATE_OUTPUT="$(gh release create "$TAG" --title "$TITLE" --notes-file RELEASE_NOTES.md --verify-tag 2>&1)"
+            CREATE_OUTPUT="$(gh release create "$TAG" --title "$TITLE" --notes-file RELEASE_NOTES.md --verify-tag --draft 2>&1)"
             echo "$CREATE_OUTPUT"
             CREATED_TAG="$(printf '%s\n' "$CREATE_OUTPUT" | sed -n 's#.*releases/tag/\([^/?[:space:]]*\).*#\1#p' | tail -n 1)"
             if printf '%s' "$CREATED_TAG" | grep -q '^untagged-'; then
               gh release edit "$CREATED_TAG" --tag "$TAG" --target "$TARGET" --verify-tag \
-                --title "$TITLE" --notes-file RELEASE_NOTES.md --draft=false
+                --title "$TITLE" --notes-file RELEASE_NOTES.md --draft=true
             fi
           fi
-          gh release edit "$TAG" --draft=false --latest
-          gh release upload "$TAG" "$VSIX" --clobber
+          gh release upload "$TAG" "$VSIX" "$ZED_LSP" "$ZED_EXT" "$CHECKSUMS" --clobber
           gh release edit "$TAG" --draft=false --latest
           ACTUAL_TAG="$(gh release view "$TAG" --json tagName --jq '.tagName')"
           if [ "$ACTUAL_TAG" != "$TAG" ]; then
             echo "::error::GitHub Release tag mismatch: expected ${TAG}, got ${ACTUAL_TAG}"
             exit 1
           fi
-          gh release view "$TAG" --json assets \
-            --jq ".assets[].name" | grep -qxF "$VSIX" \
-            || { echo "::error::GitHub Release missing asset ${VSIX}"; exit 1; }
-          PUBLIC_URL="https://github.com/${GITHUB_REPOSITORY}/releases/download/${TAG}/${VSIX}"
-          for _ in 1 2 3 4 5 6; do
-            curl -fsIL "$PUBLIC_URL" >/dev/null && exit 0
-            sleep 5
+          ASSETS="$(gh release view "$TAG" --json assets --jq '.assets[].name')"
+          for asset in "$VSIX" "$(basename "$ZED_LSP")" "$(basename "$ZED_EXT")" "$(basename "$CHECKSUMS")"; do
+            printf '%s\n' "$ASSETS" | grep -qxF "$asset" \
+              || { echo "::error::GitHub Release missing asset ${asset}"; exit 1; }
+            PUBLIC_URL="https://github.com/${GITHUB_REPOSITORY}/releases/download/${TAG}/${asset}"
+            ready=false
+            for _ in 1 2 3 4 5 6; do
+              if curl -fsIL "$PUBLIC_URL" >/dev/null; then
+                ready=true
+                break
+              fi
+              sleep 5
+            done
+            if [ "$ready" != true ]; then
+              echo "::error::GitHub Release asset is not publicly downloadable: ${PUBLIC_URL}"
+              exit 1
+            fi
           done
-          echo "::error::GitHub Release asset is not publicly downloadable: ${PUBLIC_URL}"
-          exit 1
 
       - name: Check Marketplace publisher access
         id: marketplace

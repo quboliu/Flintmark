@@ -222,6 +222,22 @@ To set the association by hand:
 }
 ```
 
+### Zed developer preview
+
+The repository also contains a native Zed extension adapter in
+[`editors/zed`](editors/zed). It adds vault-wide wikilink/tag completion,
+definition and reference navigation (including backlinks), heading/task
+symbols, document links, and Obsidian-oriented snippets to Zed's built-in
+Markdown editor. Use Zed's own `markdown: open preview to the side` action for
+rendered output.
+
+This is not full UI parity with the VS Code edition: Zed does not currently
+expose a custom-editor/webview API, so Flintmark cannot place its caret-aware
+Live Preview, interactive widgets, or custom sidebars inside Zed. The adapter
+is ready for development installation now; registry publication follows the
+first coordinated release. See the [Zed README](editors/zed/README.md) for the
+exact feature and install details.
+
 ## Settings
 
 | Setting | Default | Description |
@@ -271,6 +287,7 @@ npm run lint
 npx tsc --noEmit -p .
 npm run test:unit
 npm run test:perf
+npm run test:zed
 npm run test:e2e
 ```
 

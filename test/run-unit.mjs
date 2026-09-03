@@ -30,6 +30,7 @@ function walk(dir, acc = []) {
 // walk all of test/ for `test:unit`.
 const roots = process.argv.slice(2);
 const isFullRun = roots.length === 0;
+const outputRoot = process.env.FLINTMARK_OUT_DIR || "out";
 const files = [];
 if (roots.length === 0) {
   walk("test", files);
@@ -44,7 +45,7 @@ if (files.length === 0) {
   process.exit(0);
 }
 
-mkdirSync("out/test-unit", { recursive: true });
+mkdirSync(join(outputRoot, "test-unit"), { recursive: true });
 
 let failed = 0;
 let totalCases = 0;
@@ -53,7 +54,7 @@ const fileMetrics = [];
 const t0 = Date.now();
 for (const f of files) {
   const outfile = join(
-    "out/test-unit",
+    join(outputRoot, "test-unit"),
     f.replace(/[/\\]/g, "__").replace(/\.ts$/, ".cjs")
   );
   await build({
@@ -86,9 +87,9 @@ for (const f of files) {
 const totalMs = Date.now() - t0;
 
 if (isFullRun) {
-  mkdirSync("out/metrics", { recursive: true });
+  mkdirSync(join(outputRoot, "metrics"), { recursive: true });
   writeFileSync(
-    "out/metrics/unit.json",
+    join(outputRoot, "metrics", "unit.json"),
     JSON.stringify(
       {
         layer: "unit",

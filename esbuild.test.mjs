@@ -5,6 +5,8 @@ import esbuild from "esbuild";
 import { readdirSync, statSync } from "node:fs";
 import { join } from "node:path";
 
+const outputRoot = process.env.FLINTMARK_OUT_DIR || "out";
+
 function walk(dir) {
   const out = [];
   for (const entry of readdirSync(dir)) {
@@ -17,7 +19,7 @@ function walk(dir) {
 
 await esbuild.build({
   entryPoints: walk("test/integration"),
-  outdir: "out/test",
+  outdir: join(outputRoot, "test"),
   outbase: "test/integration",
   platform: "node",
   format: "cjs",

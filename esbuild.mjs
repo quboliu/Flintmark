@@ -1,6 +1,8 @@
 import * as esbuild from 'esbuild';
+import path from 'node:path';
 
 const isWatch = process.argv.includes('--watch');
+const outputRoot = process.env.FLINTMARK_OUT_DIR || 'out';
 
 const extensionConfig = {
   entryPoints: ['src/extension/activate.ts'],
@@ -8,7 +10,7 @@ const extensionConfig = {
   platform: 'node',
   format: 'cjs',
   external: ['vscode'],
-  outfile: 'out/extension.js',
+  outfile: path.join(outputRoot, 'extension.js'),
 };
 
 const webviewConfig = {
@@ -16,7 +18,7 @@ const webviewConfig = {
   bundle: true,
   platform: 'browser',
   format: 'iife',
-  outfile: 'out/webview.js',
+  outfile: path.join(outputRoot, 'webview.js'),
   // KaTeX CSS is imported in main.ts → emits out/webview.css; its fonts are
   // copied to out/ (the "file" loader) and the url()s are rewritten to relative
   // paths that resolve under the extension's webview resource root.
@@ -30,7 +32,7 @@ const mermaidConfig = {
   bundle: true,
   platform: 'browser',
   format: 'iife',
-  outfile: 'out/mermaid.js',
+  outfile: path.join(outputRoot, 'mermaid.js'),
   minify: true,
 };
 
